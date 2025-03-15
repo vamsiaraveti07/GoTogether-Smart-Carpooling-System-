@@ -35,6 +35,8 @@ Additional Tools: AJAX, jQuery, Bootstrap
 ✅ Emission Data Monitoring: Analyze savings & reward top contributors.
 
 📸 Screenshots
+#Signup page
+![Image](https://github.com/user-attachments/assets/1033130b-a004-49cf-9d44-51aff945ac47)
 🏠 Home Page
 
 📊 Idle Insights Feature
