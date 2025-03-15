@@ -35,18 +35,34 @@ Additional Tools: AJAX, jQuery, Bootstrap
 ✅ Emission Data Monitoring: Analyze savings & reward top contributors.
 
 📸 Screenshots
-#Signup page
+
+Signup page
 ![Image](https://github.com/user-attachments/assets/1033130b-a004-49cf-9d44-51aff945ac47)
 🏠 Home Page
+![Image](https://github.com/user-attachments/assets/b34bf0b3-e3c8-431d-a5c8-137a0f1d37a3)
+Request page
+![Image](https://github.com/user-attachments/assets/c29af140-bf8c-4f85-afa4-bbea4f4bdfae)
+Booking Page
+![Image](https://github.com/user-attachments/assets/66e66fe6-4203-4249-bf86-3cde102cf04b)
+Booking History Page
+![Image](https://github.com/user-attachments/assets/cb86c6ab-4ecc-4861-96ee-16acc7e21171)
+Emission Calculate Page
+![Image](https://github.com/user-attachments/assets/3003d2ff-ec62-4edb-b3a3-e55c3511809f)
 
-📊 Idle Insights Feature
-
-
-🌱 Tree Rewards System
-
-
-📢 Social Sharing Feature
-
+Emission Leaderboard 
+![Image](https://github.com/user-attachments/assets/8ef7d13a-cfa4-417d-9179-e63533912ccf)
+Sharing Page
+![Image](https://github.com/user-attachments/assets/5710cdeb-bb02-4360-a5b4-fad957b80e34)
+Alternate transport page
+![Image](https://github.com/user-attachments/assets/5f7af49f-81c6-401c-a53c-ddc69504bc69)
+Fuel Saving Page
+![Image](https://github.com/user-attachments/assets/041a8b1c-4907-4a5e-bd23-436947270f24)
+Routine booking page
+![Image](https://github.com/user-attachments/assets/5347d794-a0f0-43ae-bc07-8e40f9820b9d)
+Eco tips Page
+![Image](https://github.com/user-attachments/assets/63f17466-290b-44ec-a269-284519fef186)
+Idle insights page
+![Image](https://github.com/user-attachments/assets/60ab9919-0022-422b-bb12-5dbe5189593c)
 
 💡 How It Works
 🚗 Idle Insights Calculation Example
