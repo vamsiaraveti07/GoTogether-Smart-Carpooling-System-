@@ -8,32 +8,46 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 }
 
 $user_email = $_SESSION['email'];
+$savings = [];
+$passenger_savings = [];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $distance = floatval($_POST["distance"]);
-    $fuel_type = $_POST["fuel_type"];
-    $vehicle_type = $_POST["vehicle_type"];
+    $total_passengers = isset($_POST["total_passengers"]) ? intval($_POST["total_passengers"]) : 0;
+    $mileage = isset($_POST["mileage"]) ? floatval($_POST["mileage"]) : 0;
+    $fuel_type = $_POST["fuel_type"] ?? '';
 
-    // Emission factors (g/km)
-     $emission_factors = [
-        "petrol" => ["CO2" => 2.31, "N2O" => 0.05, "CO" => 2.3, "PM2.5" => 0.02, "VOCs" => 0.3, "SO2" => 0.01],
-        "diesel" => ["CO2" => 2.68, "N2O" => 0.07, "CO" => 1.8, "PM2.5" => 0.04, "VOCs" => 0.2, "SO2" => 0.02],
-        "cng" => ["CO2" => 2.18, "N2O" => 0.03, "CO" => 1.5, "PM2.5" => 0.01, "VOCs" => 0.1, "SO2" => 0.005]
-    ];
+    $distances = [];
+    $total_distance = 0;
 
-    $savings = [];
-    foreach ($emission_factors[$fuel_type] as $gas => $factor) {
-        $savings[$gas] = $factor * $distance;
+    for ($i = 1; $i <= $total_passengers; $i++) {
+        if (isset($_POST["distance_$i"]) && is_numeric($_POST["distance_$i"])) {
+            $distances[$i] = floatval($_POST["distance_$i"]);
+        }
     }
 
-    // Store savings in database
-    $stmt = $conn->prepare("INSERT INTO emission_savings 
-        (user_email, distance, fuel_type, vehicle_type, CO2, N2O, CO, PM2_5, VOCs, SO2) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sdssdddddd", $user_email, $distance, $fuel_type, $vehicle_type, 
-        $savings['CO2'], $savings['N2O'], $savings['CO'], $savings['PM2.5'], $savings['VOCs'], $savings['SO2']);
-    $stmt->execute();
-    $stmt->close();
+    if (!empty($distances)) {
+        $total_distance = array_sum($distances);
+    }
+
+    $fuel_used = ($mileage > 0) ? ($total_distance / $mileage) : 0;
+
+    $emission_factors = [
+        "petrol" => ["CO2" => 2392, "N2O" => 0.05, "CO" => 2.3, "PM2.5" => 0.02, "VOCs" => 0.3, "SO2" => 0.01],
+        "diesel" => ["CO2" => 2640, "N2O" => 0.07, "CO" => 1.8, "PM2.5" => 0.04, "VOCs" => 0.2, "SO2" => 0.02],
+        "cng" => ["CO2" => 1800, "N2O" => 0.03, "CO" => 1.5, "PM2.5" => 0.01, "VOCs" => 0.1, "SO2" => 0.005]
+    ];
+
+    if (isset($emission_factors[$fuel_type])) {
+        foreach ($emission_factors[$fuel_type] as $gas => $factor) {
+            $savings[$gas] = ($factor * $total_distance);
+        }
+
+        foreach ($distances as $i => $distance) {
+            foreach ($emission_factors[$fuel_type] as $gas => $factor) {
+                $passenger_savings[$i][$gas] = ($factor * $distance);
+            }
+        }
+    }
 }
 ?>
 
@@ -46,15 +60,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <title>Emission Reduction Calculator</title>
     <link rel="stylesheet" href="assets\emssion_calculator.css">
 </head>
-<h1>GO <span>TOGETHER</span>
-</h1>
 
 <body>
+    <h1>GO <span>TOGETHER</span></h1>
     <div class="container">
         <h2>Emission Reduction Calculator</h2>
         <form method="post">
-            <label for="distance">Distance Traveled (km):</label>
-            <input type="number" name="distance" required>
+            <label for="total_passengers">Number of Passengers:</label>
+            <input type="number" name="total_passengers" id="total_passengers" required min="1" max="10">
+
+            <div id="passenger_inputs"></div>
+
+            <label for="mileage">Vehicle Mileage (km/l):</label>
+            <input type="number" name="mileage" required>
 
             <label for="fuel_type">Fuel Type:</label>
             <select name="fuel_type" required>
@@ -63,72 +81,97 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <option value="cng">CNG</option>
             </select>
 
-            <label for="vehicle_type">Vehicle Type:</label>
-            <select name="vehicle_type" required>
-                <option value="car">Car</option>
-                <option value="bike">Bike</option>
-                <option value="bus">Bus</option>
-            </select>
-
             <button type="submit">Calculate & Save</button>
         </form>
 
         <?php if (!empty($savings)): ?>
         <div class="result">
-            <h3>Emission Savings (Stored in Your Account):</h3>
+            <h3> Your Actual Emission Savings</h3>
             <ul>
                 <?php foreach ($savings as $gas => $amount): ?>
-                <li><strong><?php echo $gas; ?>:</strong> <?php echo number_format($amount, 2); ?> g</li>
+                <li>
+                    <strong><?php echo $gas; ?>:</strong>
+                    <?php 
+                        echo ($amount >= 1000) ? number_format($amount / 1000, 2) . " kg" : number_format($amount, 2) . " g";
+                    ?>
+                </li>
                 <?php endforeach; ?>
             </ul>
         </div>
+
+        <div class="result">
+            <h3>Emission Savings Per Passenger</h3>
+            <table border="3" width="100%">
+                <tr>
+                    <th>Passenger</th>
+                    <th>Distance (km)</th>
+                    <th>CO₂</th>
+                    <th>N₂O</th>
+                    <th>CO</th>
+                    <th>PM2.5</th>
+                    <th>VOCs</th>
+                    <th>SO₂</th>
+                </tr>
+                <?php foreach ($passenger_savings as $i => $savings): ?>
+                <tr>
+                    <td>Passenger <?php echo $i; ?></td>
+                    <td><?php echo $distances[$i]; ?> km</td>
+                    <?php foreach ($savings as $gas => $amount): ?>
+                    <td>
+                        <?php 
+                            echo ($amount >= 1000) ? number_format($amount / 1000, 2) . " kg" : number_format($amount, 2) . " g";
+                        ?>
+                    </td>
+                    <?php endforeach; ?>
+                </tr>
+                <?php endforeach; ?>
+            </table>
+        </div>
+
+        <div class="result">
+            <h3>📌 Example Calculation (50 km Trip, Mileage: 15 km/l)</h3>
+            <p><strong>Formula:</strong> (Distance × Emission Factor) ÷ Mileage</p>
+
+            <div class="example-section">
+                <?php foreach (["petrol", "diesel", "cng"] as $fuel): ?>
+                <div class="example-box">
+                    <h4>⛽ <?php echo ucfirst($fuel); ?> Example</h4>
+                    <p><strong>Mileage Used:</strong> 15 km/l</p>
+                    <p><strong>Fuel Used:</strong> 50 km ÷ 15 km/l = 3.33 liters</p>
+                    <table border="1" width="100%">
+                        <tr>
+                            <th>Gas</th>
+                            <th>Factor (g/km)</th>
+                            <th>Emissions</th>
+                        </tr>
+                        <?php
+                    $example_distance = 50;
+                    foreach ($emission_factors[$fuel] as $gas => $factor) {
+                        $emissions = $example_distance * $factor;
+                        echo "<tr>
+                            <td>{$gas}</td>
+                            <td>{$factor} g/km</td>
+                            <td>" . (($emissions >= 1000) ? number_format($emissions / 1000, 2) . " kg" : number_format($emissions, 2) . " g") . "</td>
+                        </tr>";
+                    }
+                ?>
+                    </table>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
         <?php endif; ?>
-        <div class="how">
-            <h3>How It Works:</h3>
-            <p>We calculate emission savings using:</p>
-            <p><strong>Emission Saved (g) = Distance (km) × Emission Factor (g/km)</strong></p>
-            <p>For example, if you travel 10 km using a petrol car:</p>
-        </div>
 
-
-        <div class="formula">
-            <div>
-                <h3>Petrol:</h3>
-                <ul>
-                    <li>CO₂: 10 × 239.2 = 2.392 kg</li>
-                    <li>N₂O: 10 × 0.05 = 0.5 g</li>
-                    <li>CO: 10 × 2.3 = 23 g</li>
-                    <li>PM2.5: 10 × 0.02 = 0.2 g</li>
-                    <li>VOCs: 10 × 0.3 = 3 g</li>
-                    <li>SO₂: 10 × 0.01 = 0.1 g</li>
-                </ul>
-            </div>
-            <div>
-                <h3>Diesel:</h3>
-                <ul>
-                    <li>CO₂: 10 × 264 = 2.64 kg</li>
-                    <li>N₂O: 10 × 0.07 = 0.7 g</li>
-                    <li>CO: 10 × 1.8 = 18 g</li>
-                    <li>PM2.5: 10 × 0.04 = 0.4 g</li>
-                    <li>VOCs: 10 × 0.2 = 2 g</li>
-                    <li>SO₂: 10 × 0.02 = 0.2 g</li>
-                </ul>
-            </div>
-            <div>
-                <h3>CNG:</h3>
-                <ul>
-                    <li>CO₂: 10 × 180 = 1.8 kg</li>
-                    <li>N₂O: 10 × 0.03 = 0.3 g</li>
-                    <li>CO: 10 × 1.5 = 15 g</li>
-                    <li>PM2.5: 10 × 0.01 = 0.1 g</li>
-                    <li>VOCs: 10 × 0.1 = 1 g</li>
-                    <li>SO₂: 10 × 0.005 = 0.05 g</li>
-                </ul>
-            </div>
-        </div>
-
-    </div>
-    </div>
+        <script>
+        document.getElementById('total_passengers').addEventListener('change', function() {
+            let container = document.getElementById('passenger_inputs');
+            container.innerHTML = '';
+            for (let i = 1; i <= this.value; i++) {
+                container.innerHTML += `<label>Distance for Passenger ${i} (km):</label>
+                                        <input type="number" name="distance_${i}" required><br>`;
+            }
+        });
+        </script>
 </body>
 
 </html>
